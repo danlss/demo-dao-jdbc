@@ -94,7 +94,43 @@ public class SellerDaoJDBC implements SellerDao {
 
 	@Override
 	public List<Seller> findAll() {
-		return null;
+		PreparedStatement st = null;
+		ResultSet rs = null;
+		try {
+			st = conn.prepareStatement(
+					"SELECT seller.*,department.Name as DepName " + "FROM seller INNER JOIN department "
+							+ "ON seller.DepartmentId = department.Id " + "ORDER BY Name");
+
+
+			// traz os resultados em forma de linhas de tabela
+			rs = st.executeQuery();
+
+			List<Seller> list = new ArrayList<Seller>();
+			Map<Integer, Department> map = new HashMap<>();
+
+			// caso contenha dados [retornou uma linha do executequery]
+			while (rs.next()) {
+				// testar se dep existe dentro do map, caso nao exista map retorna null
+				Department dep = map.get(rs.getInt("DepartmentId"));
+
+				if (dep == null) {
+					//caso id dep nao tenha sido instanciado ainda
+					dep = instantiateDepartment(rs);
+					map.put(rs.getInt("DepartmentId"), dep);
+					
+				}
+				Seller obj = instatiateSeller(rs, dep);
+				list.add(obj);
+			}
+			return list;
+			// nao existe nenhum vendedor com esse id
+			//return null;
+		} catch (SQLException e) {
+			throw new DbException(e.getMessage());
+		} finally {
+			DB.closeStatement(st);
+			DB.closeResultSet(rs);
+		}
 	}
 
 	@Override
@@ -128,10 +164,10 @@ public class SellerDaoJDBC implements SellerDao {
 				}
 				Seller obj = instatiateSeller(rs, dep);
 				list.add(obj);
-				return list;
+				
 			}
 			// nao existe nenhum vendedor com esse id
-			return null;
+			return list;
 		} catch (SQLException e) {
 			throw new DbException(e.getMessage());
 		} finally {
